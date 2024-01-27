@@ -99,6 +99,8 @@ class OpenAIHelper:
     def generate_completions_stream(self):
         checks = 0
         old_message_length = 0
+        aborted_due_to_user = False
+
         while checks < self.maxchecks:
             time.sleep(1)
             current_message = self.bot.get_latest_message()
@@ -111,8 +113,6 @@ class OpenAIHelper:
             if last_space != -1:
                 new_message = new_message[:last_space + 1]
 
-            old_message_length += len(new_message)
-
             if 'user:' in current_message:
                 self.bot.abort_message()
                 new_message = new_message.split('user:')[0].strip()
@@ -123,14 +123,21 @@ class OpenAIHelper:
             if not self.bot.is_generating():
                 break
 
+            old_message_length += len(new_message)
+
             if new_message != "":
                 yield self.generate_request(new_message, None, "chat.completion.chunk")
             checks += 1
 
         final_message = current_message[old_message_length:]
-        if not aborted_due_to_user:  # Check the flag before processing final_message
-            final_message = current_message[old_message_length:]
-            if final_message != "":
+        if final_message != "":
+            if aborted_due_to_user:
+                # If aborted due to "user:", check if there's more text after "user:"
+                if 'user:' in final_message:
+                    final_message = final_message.split('user:')[0].strip()
+                    if final_message != "":
+                        yield self.generate_request(final_message, "stop", "chat.completion.chunk")
+            else:
                 yield self.generate_request(final_message, "stop", "chat.completion.chunk")
 
         yield self.generate_request("", "stop", "chat.completion.chunk")
