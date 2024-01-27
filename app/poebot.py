@@ -9,6 +9,8 @@ from selenium.common.exceptions import WebDriverException, TimeoutException
 import markdownify, time, secrets, string, os, glob, hashlib
 from config import config
 import undetected_chromedriver as uc
+import threading
+
 
 def handle_errors(func):
     @wraps(func)
@@ -27,6 +29,8 @@ def handle_errors(func):
 class PoeBot:
     message_hash_list = set()
     def __init__(self):
+        self.keep_alive_flag = True
+        self.keep_alive_thread = None
         self.start_driver()
 
     def start_driver(self, url = None):
@@ -40,7 +44,18 @@ class PoeBot:
             self.driver.get(url)
         else:
             self.driver.get(f"https://poe.com/{config['bot']}")
-        
+            
+        if self.keep_alive_thread is None:
+            self.keep_alive_thread = threading.Thread(target=self.keep_alive)
+            self.keep_alive_thread.start()
+            
+        print("Driver initialized:", hasattr(self, "driver"))
+            
+    def keep_alive(self):
+        while self.keep_alive_flag:
+            self.driver.execute_script("window.focus();")
+            time.sleep(60)
+       
     
     @handle_errors
     def get_latest_message(self):
@@ -73,8 +88,7 @@ class PoeBot:
         if (config.get("autorefresh", True) == True):
             self.driver.refresh()
             time.sleep(1)
-            self.driver.execute_script("""var scrollElement = document.querySelector('.MainColumn_scrollSection__TuAiS.MainColumn_startAtBottom__Jb3v0'); if (scrollElement) {scrollElement.scrollTop = scrollElement.scrollHeight;}
-            """)
+            self.driver.execute_script("""var scrollElement = document.querySelector('.MainColumn_scrollSection__TuAiS.MainColumn_startAtBottom__Jb3v0'); if (scrollElement) {scrollElement.scrollTop = scrollElement.scrollHeight;}""")
         start_time = time.time()
         while wait_for_message:
             latest_message = self.get_latest_message()
@@ -154,9 +168,15 @@ class PoeBot:
     
     def kill_driver(self):
         if hasattr(self, "driver"):
+            self.keep_alive_flag = False
+            if self.keep_alive_thread is not None:
+                self.keep_alive_thread.join()
             self.driver.quit()
 
     def __del__(self):
+        self.keep_alive_flag = False
+        if self.keep_alive_thread is not None:
+            self.keep_alive_thread.join()
         if hasattr(self, "driver"):
             self.kill_driver()
 
