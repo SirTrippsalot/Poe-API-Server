@@ -115,8 +115,6 @@ class OpenAIHelper:
 
             if 'user:' in current_message:
                 self.bot.abort_message()
-                new_message = new_message.split('user:')[0].strip()
-                yield self.generate_request(new_message, "stop", "chat.completion.chunk")
                 aborted_due_to_user = True  # Set the flag when aborting
                 break
 
