@@ -139,5 +139,3 @@ class OpenAIHelper:
                         yield self.generate_request(final_message, "stop", "chat.completion.chunk")
             else:
                 yield self.generate_request(final_message, "stop", "chat.completion.chunk")
-
-        yield self.generate_request("", "stop", "chat.completion.chunk")
