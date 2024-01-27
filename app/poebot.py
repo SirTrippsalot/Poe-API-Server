@@ -73,9 +73,11 @@ class PoeBot:
     @handle_errors
     def abort_message(self):
         try:
-            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//*[contains(@class, 'ChatStopMessageButton_stopButton__')]"))).click()
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@aria-label='stop message']"))).click()
         except TimeoutException:
             return
+        except StaleElementReferenceException:
+            pass
 
     @handle_errors
     def send_message(self, message, wait_for_message = True):
@@ -88,7 +90,12 @@ class PoeBot:
         if (config.get("autorefresh", True) == True):
             self.driver.refresh()
             time.sleep(1)
-            self.driver.execute_script("""var scrollElement = document.querySelector('.MainColumn_scrollSection__TuAiS.MainColumn_startAtBottom__Jb3v0'); if (scrollElement) {scrollElement.scrollTop = scrollElement.scrollHeight;}""")
+            self.driver.execute_script("""
+                var scrollElement = document.querySelector('.SidebarLayout_mainOverlay__DNumc');
+                if (scrollElement) {
+                    scrollElement.scrollTop = scrollElement.scrollHeight;
+                }
+            """)
         start_time = time.time()
         while wait_for_message:
             latest_message = self.get_latest_message()

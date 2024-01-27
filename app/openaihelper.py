@@ -82,29 +82,55 @@ class OpenAIHelper:
         self.send_message(messages)
         checks = 0
         while checks < self.maxchecks:
-            if not self.bot.is_generating() and self.bot.get_latest_message() != "":
-                break
+            current_message = self.bot.get_latest_message()
+            if 'user:' in current_message:
+                self.bot.abort_message()
+                # Process or truncate message as needed
+                current_message = current_message.split('user:')[0].strip()
+                return self.generate_request(current_message, "stop", "chat.completion")
+
+            if not self.bot.is_generating():
+                # Message generation finished, process the final message
+                return self.generate_request(current_message, "stop", "chat.completion")
+
             checks += 1
             time.sleep(1)
-        return self.generate_request(self.bot.get_latest_message(), "stop", "chat.completion")
-    
+
     def generate_completions_stream(self):
         checks = 0
         old_message_length = 0
         while checks < self.maxchecks:
-            if not self.bot.is_generating() and self.bot.get_latest_message() != "":
-                break
             time.sleep(1)
-            message = self.bot.get_latest_message()
-            message = message.rstrip('\n')
-            new_message_length = len(message)
-            new_message = message[old_message_length:new_message_length]
-            old_message_length = new_message_length
-            checks += 1
-            
+            current_message = self.bot.get_latest_message()
+            current_message = current_message.rstrip('\n')
+            new_message_length = len(current_message)
+            new_message = current_message[old_message_length:new_message_length]
+
+            # Find the last whitespace character in the new message
+            last_space = max(new_message.rfind(' '), new_message.rfind('\t'), new_message.rfind('\n'))
+            if last_space != -1:
+                new_message = new_message[:last_space + 1]
+
+            old_message_length += len(new_message)
+
+            if 'user:' in current_message:
+                self.bot.abort_message()
+                new_message = new_message.split('user:')[0].strip()
+                yield self.generate_request(new_message, "stop", "chat.completion.chunk")
+                aborted_due_to_user = True  # Set the flag when aborting
+                break
+
+            if not self.bot.is_generating():
+                break
+
             if new_message != "":
                 yield self.generate_request(new_message, None, "chat.completion.chunk")
-        final_message = self.bot.get_latest_message()[old_message_length:]
-        if final_message != "":
-            yield self.generate_request(final_message, "stop", "chat.completion.chunk")
+            checks += 1
+
+        final_message = current_message[old_message_length:]
+        if not aborted_due_to_user:  # Check the flag before processing final_message
+            final_message = current_message[old_message_length:]
+            if final_message != "":
+                yield self.generate_request(final_message, "stop", "chat.completion.chunk")
+
         yield self.generate_request("", "stop", "chat.completion.chunk")
