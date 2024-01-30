@@ -38,18 +38,18 @@ class OpenAIHelper:
             char_match = re.search(r"\[Character==(.+?)\]", content)
             user_match = re.search(r"\[User==(.+?)\]", content)
             
-            if char_match:
+            if char_match and 1==2:
                 char = char_match.group(1)
                 content = content.replace(char_match.group(0), '')
 
-            if user_match:
+            if user_match and 1==2:
                 user = user_match.group(1)
                 content = content.replace(user_match.group(0), '')
                 
-            if role == "assistant" and char:
+            if role == "assistant" and char and 1==2:
                 name = char
 
-            if role == "user" and user:
+            if role == "user" and user and 1==2:
                 name = user
         
             formatted_msg = f"{role if not name else name}: {content}"
@@ -83,7 +83,7 @@ class OpenAIHelper:
         checks = 0
         while checks < self.maxchecks:
             current_message = self.bot.get_latest_message()
-            if 'user:' in current_message:
+            if 'user:' in current_message.lower():
                 self.bot.abort_message()
                 # Process or truncate message as needed
                 current_message = current_message.split('user:')[0].strip()
@@ -113,7 +113,7 @@ class OpenAIHelper:
             if last_space != -1:
                 new_message = new_message[:last_space + 1]
 
-            if 'user:' in current_message:
+            if 'user:' in current_message.lower():
                 self.bot.abort_message()
                 aborted_due_to_user = True  # Set the flag when aborting
                 break
