@@ -27,32 +27,33 @@ class OpenAIHelper:
     
     def format_message(self, messages):
         formatted_messages = []
-        char = None
-        user = None
+        # char = None
+        # user = None
 
         for message in messages:
             role = message.get("role", "Unknown")
             name = message.get("name", "")
             content = message.get("content", "")
     
-            char_match = re.search(r"\[Character==(.+?)\]", content)
-            user_match = re.search(r"\[User==(.+?)\]", content)
+            # char_match = re.search(r"\[Character==(.+?)\]", content)
+            # user_match = re.search(r"\[User==(.+?)\]", content)
             
-            if char_match and 1==2:
-                char = char_match.group(1)
-                content = content.replace(char_match.group(0), '')
+            # if char_match and 1==2:
+                # char = char_match.group(1)
+                # content = content.replace(char_match.group(0), '')
 
-            if user_match and 1==2:
-                user = user_match.group(1)
-                content = content.replace(user_match.group(0), '')
+            # if user_match and 1==2:
+                # user = user_match.group(1)
+                # content = content.replace(user_match.group(0), '')
                 
-            if role == "assistant" and char and 1==2:
-                name = char
+            # if role == "assistant" and char and 1==2:
+                # name = char
 
-            if role == "user" and user and 1==2:
-                name = user
+            # if role == "user" and user and 1==2:
+                # name = user
         
-            formatted_msg = f"{role if not name else name}: {content}"
+            # formatted_msg = f"{role if not name else name}: {content}"
+            formatted_msg = f"{name if name else ''}{': ' + content if name else content}"
             formatted_messages.append(formatted_msg)
         return "\n".join(formatted_messages)
     

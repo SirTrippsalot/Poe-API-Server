@@ -109,6 +109,9 @@ class PoeBot:
 
     @handle_errors
     def send_message_as_file(self, message):
+    
+        narrative_history_content = ""
+    
         # Generate a random filename
         filename_length = secrets.randbelow(8) + 9
         base_filename = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(filename_length))
@@ -119,8 +122,10 @@ class PoeBot:
 
         # Define regex patterns for the tags
         patterns = {
-            "currentPrompt": re.compile(r"(<currentPrompt>[\s\S]*?</currentPrompt>)"),
-            "narrativeHistory": re.compile(r"(<narrativeHistory>[\s\S]*?</narrativeHistory>)")
+            "1_currentPrompt": re.compile(r"(<currentPrompt>[\s\S]*?</currentPrompt>)"),
+            "5_narrativeHistory": re.compile(r"(<narrativeHistory>[\s\S]*?</narrativeHistory>)"),
+            "2_NPC": re.compile(r"(<NPC>[\s\S]*?</NPC>)"),
+            "3_USER": re.compile(r"(<PLAYER>[\s\S]*?</PLAYER>)")
         }
 
         file_paths = []
@@ -129,24 +134,35 @@ class PoeBot:
         for tag, pattern in patterns.items():
             match = pattern.search(message)
             if match:
-                content_with_tags = match.group(1)  # This includes the tags
-                tag_filename = f"{tag}-{base_filename}.txt"
+                content_with_tags = match.group(1)
+                tag_filename = f"{tag}.txt"
                 txt_file_path = os.path.join(".cache", tag_filename)
                 with open(txt_file_path, 'w', encoding='utf-8') as file:
                     file.write(content_with_tags)
                 file_paths.append(txt_file_path)
-                message = pattern.sub('', message)  # Remove the tag and its content from the main message
+                message = pattern.sub('', message)
 
+                if tag == "narrativeHistory":
+                    narrative_history_content = content_with_tags
+                    
+                
         # Create the main file with the remaining message
-        main_file_path = os.path.join(".cache", f"Main-{base_filename}.txt")
+        main_file_path = os.path.join(".cache", f"4_Main.txt")
         with open(main_file_path, 'w', encoding='utf-8') as file:
             file.write(message)
         file_paths.append(main_file_path)
 
         # Send all files in one action
-        self.send_files(file_paths)
+        self.send_files(file_paths, narrative_history_content)
 
-    def send_files(self, file_paths):
+    def send_files(self, file_paths, narrative_history):
+        # Adjusted regular expression to match the info panel format
+        info_panel_pattern = re.compile(r"\[\s*Location:.*?\|.*?\]")
+        info_panels = info_panel_pattern.findall(narrative_history)
+
+        # Extract the last occurrence of the info panel
+        last_info_panel = info_panels[-1] if info_panels else ""
+
         # Logic to send multiple files in one action
         for file_path in file_paths:
             absolute_path = os.path.abspath(file_path)
@@ -155,7 +171,7 @@ class PoeBot:
 
         # Additional steps to send the message, if required
         text_area = self.driver.find_element(By.XPATH, "//textarea[contains(@class, 'GrowingTextArea_textArea__')]")
-        text_area.send_keys(config.get("instruction", "-"))
+        text_area.send_keys(last_info_panel + "    " + config.get("instruction", "-"))
         text_area.send_keys(Keys.RETURN)
 
 
